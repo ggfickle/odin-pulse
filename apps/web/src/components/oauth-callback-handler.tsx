@@ -10,12 +10,13 @@ export function OAuthCallbackHandler({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [message, setMessage] = useState("正在处理登录回调...");
+  const code = searchParams.get("code");
+  const [message, setMessage] = useState(
+    code ? "正在处理登录回调..." : "回调缺少 code 参数。",
+  );
 
   useEffect(() => {
-    const code = searchParams.get("code");
     if (!code) {
-      setMessage("回调缺少 code 参数。");
       return;
     }
 
