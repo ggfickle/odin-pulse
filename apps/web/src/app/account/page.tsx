@@ -5,7 +5,8 @@ import { ArrowLeft, ShieldCheck, UserRound, Sparkles, Settings, Activity } from 
 import { motion } from "framer-motion";
 
 import { AccountPanel } from "@/components/account-panel";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 15 },

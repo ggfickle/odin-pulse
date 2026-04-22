@@ -210,7 +210,7 @@ function NewsPageContent() {
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-4">分类筛选</label>
-              <Select value={category || "none"} onValueChange={(v: string) => handleFilter("category", v)}>
+              <Select value={category || "none"} onValueChange={(v: string | null) => handleFilter("category", v ?? "none")}>
                 <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all shadow-none">
                   <SelectValue placeholder="全部类别" />
                 </SelectTrigger>

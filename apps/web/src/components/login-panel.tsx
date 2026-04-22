@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Github, LoaderCircle, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
