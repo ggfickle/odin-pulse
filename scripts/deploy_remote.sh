@@ -87,13 +87,15 @@ fi
 
 cd "${DEPLOY_PATH}"
 
+log "syncing repository to origin/${BRANCH}"
 git fetch origin "${BRANCH}"
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
   git switch "${BRANCH}"
 else
   git switch --track -c "${BRANCH}" "origin/${BRANCH}"
 fi
-git pull --ff-only origin "${BRANCH}"
+git reset --hard "origin/${BRANCH}"
+git clean -fd
 
 mkdir -p "${ODIN_PULSE_RUNTIME_ENV_DIR}"
 
