@@ -1,0 +1,36 @@
+name: Self-hosted Runner Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/self-hosted-runner-check.yml
+
+jobs:
+  runner-check:
+    runs-on:
+      - self-hosted
+      - Linux
+      - ARM64
+      - odin
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print runner info
+        run: |
+          set -euo pipefail
+          echo "repo=${GITHUB_REPOSITORY}"
+          echo "runner=${RUNNER_NAME}"
+          echo "arch=$(uname -m)"
+          echo "kernel=$(uname -sr)"
+          docker --version
+      - name: Verify workspace write access
+        run: |
+          set -euo pipefail
+          test -w "$GITHUB_WORKSPACE"
+          echo "ok" > "$GITHUB_WORKSPACE/.runner-check"
+          cat "$GITHUB_WORKSPACE/.runner-check"
