@@ -4,8 +4,19 @@ import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Github, LoaderCircle, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type LoginMode = "password" | "code";
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+};
 
 export function LoginPanel() {
   const router = useRouter();
@@ -136,131 +147,180 @@ export function LoginPanel() {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="panel-strong rounded-[2rem] px-6 py-6 md:px-8">
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
+    <motion.div 
+      className="grid gap-8 xl:grid-cols-[1fr_360px]"
+      initial="initial"
+      animate="animate"
+      variants={{
+        animate: { transition: { staggerChildren: 0.1 } }
+      }}
+    >
+      <motion.section variants={fadeInUp} className="panel-strong rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
+        <div className="flex flex-wrap gap-4 mb-8">
+          <Button
+            variant={mode === "password" ? "default" : "outline"}
             onClick={() => setMode("password")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              mode === "password"
-                ? "bg-primary text-white"
-                : "border border-slate-300 bg-white text-slate-700"
-            }`}
+            className="rounded-full px-8 py-6 h-auto font-bold text-base shadow-lg"
           >
             邮箱密码
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={mode === "code" ? "default" : "outline"}
             onClick={() => setMode("code")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              mode === "code"
-                ? "bg-primary text-white"
-                : "border border-slate-300 bg-white text-slate-700"
-            }`}
+            className="rounded-full px-8 py-6 h-auto font-bold text-base shadow-lg"
           >
             邮箱验证码
-          </button>
+          </Button>
         </div>
 
         <form
           onSubmit={mode === "password" ? handlePasswordLogin : handleCodeLogin}
-          className="mt-6 grid gap-4"
+          className="grid gap-6"
         >
-          <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-            邮箱
-            <input
+          <div className="grid gap-2">
+            <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
+              邮箱地址
+            </label>
+            <Input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none"
+              className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
               placeholder="you@example.com"
               required
             />
-          </label>
+          </div>
 
-          {mode === "password" ? (
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-              密码
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none"
-                placeholder="请输入密码"
-                required
-              />
-            </label>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
-                验证码
-                <input
-                  value={verifyCode}
-                  onChange={(event) => setVerifyCode(event.target.value)}
-                  className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none"
-                  placeholder="6 位验证码"
+          <AnimatePresence mode="wait">
+            {mode === "password" ? (
+              <motion.div
+                key="password-field"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="grid gap-2"
+              >
+                <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
+                  安全密码
+                </label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
+                  placeholder="请输入密码"
                   required
                 />
-              </label>
-              <button
-                type="button"
-                onClick={sendCode}
-                disabled={sendingCode || !email}
-                className="mt-7 h-12 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              </motion.div>
+            ) : (
+              <motion.div
+                key="code-field"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="grid gap-4 sm:grid-cols-[1fr_auto]"
               >
-                {sendingCode ? "发送中" : "发送验证码"}
-              </button>
-            </div>
-          )}
+                <div className="grid gap-2">
+                  <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
+                    验证码
+                  </label>
+                  <Input
+                    value={verifyCode}
+                    onChange={(event) => setVerifyCode(event.target.value)}
+                    className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
+                    placeholder="6 位验证码"
+                    required
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={sendCode}
+                  disabled={sendingCode || !email}
+                  className="mt-7 h-14 rounded-2xl border-slate-200 bg-white px-8 font-bold text-slate-700 shadow-sm"
+                >
+                  {sendingCode ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "获取验证码"
+                  )}
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-70"
+            className="mt-4 h-14 rounded-2xl bg-primary px-10 text-lg font-bold text-white shadow-xl shadow-primary/20 transition-all hover:-translate-y-1 hover:bg-slate-800 disabled:opacity-70"
           >
-            {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {loading ? (
+              <LoaderCircle className="h-5 w-5 animate-spin" />
+            ) : (
+              <Mail className="h-5 w-5" />
+            )}
             {submitLabel}
-          </button>
+          </Button>
         </form>
 
-        {message ? <p className="mt-4 text-sm font-medium text-emerald-700">{message}</p> : null}
-        {error ? <p className="mt-4 text-sm font-medium text-rose-700">{error}</p> : null}
-      </section>
+        {message && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 border border-emerald-100"
+          >
+            {message}
+          </motion.p>
+        )}
+        {error && (
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 border border-rose-100"
+          >
+            {error}
+          </motion.p>
+        )}
+      </motion.section>
 
-      <aside className="panel rounded-[2rem] px-6 py-6">
-        <p className="eyebrow">OAuth</p>
-        <h2 className="headline mt-2 text-2xl font-semibold text-primary">第三方登录</h2>
-        <div className="mt-5 grid gap-3">
-          <button
-            type="button"
-            onClick={() => redirectToProvider("github")}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-          >
-            <Github className="h-4 w-4" />
-            GitHub 登录
-          </button>
-          <button
-            type="button"
-            onClick={() => redirectToProvider("google")}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Google 登录
-          </button>
-        </div>
-        <p className="mt-5 text-sm leading-7 text-slate-600">
-          GitHub / Google 的 client id 和 secret 不在公开仓库里，运行时配置来自数据库和服务器环境。
-        </p>
-        <Link
-          href="/account"
-          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:text-primary"
-        >
-          <UserRound className="h-4 w-4" />
-          已登录？进入账户中心
-        </Link>
-      </aside>
-    </div>
+      <motion.aside variants={fadeInUp} className="flex flex-col gap-8">
+        <Card className="panel border-none rounded-[2.5rem] p-6 shadow-xl">
+          <CardHeader className="p-0 mb-6">
+            <p className="eyebrow">OAuth Access</p>
+            <CardTitle className="headline mt-2 text-2xl font-bold text-primary">第三方登录</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 grid gap-4">
+            <Button
+              variant="outline"
+              onClick={() => redirectToProvider("github")}
+              className="h-14 w-full rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:border-primary hover:text-primary transition-all"
+            >
+              <Github className="h-5 w-5 mr-2" />
+              GitHub 登录
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => redirectToProvider("google")}
+              className="h-14 w-full rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:border-primary hover:text-primary transition-all"
+            >
+              <ShieldCheck className="h-5 w-5 mr-2" />
+              Google 登录
+            </Button>
+            
+            <p className="mt-4 text-sm leading-relaxed text-slate-500 bg-slate-50 p-4 rounded-2xl border border-slate-100 italic">
+              "工业级认证基建，GitHub / Google 授权受控于后端环境变量，确保数据主权。"
+            </p>
+            
+            <Button variant="link" asChild className="mt-4 font-bold text-secondary hover:text-primary">
+              <Link href="/account" className="flex items-center gap-2">
+                <UserRound className="h-4 w-4" />
+                已登录？进入账户中心
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.aside>
+    </motion.div>
   );
 }
 

@@ -210,7 +210,7 @@ function NewsPageContent() {
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-4">分类筛选</label>
-              <Select value={category || "none"} onValueChange={(v) => handleFilter("category", v ?? "none")}>
+              <Select value={category || "none"} onValueChange={(v: string) => handleFilter("category", v)}>
                 <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all shadow-none">
                   <SelectValue placeholder="全部类别" />
                 </SelectTrigger>
@@ -225,7 +225,7 @@ function NewsPageContent() {
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-4">数据来源</label>
-              <Select value={source || "none"} onValueChange={(v) => handleFilter("source", v ?? "none")}>
+              <Select value={source || "none"} onValueChange={(v: string) => handleFilter("source", v)}>
                 <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all shadow-none">
                   <SelectValue placeholder="全部来源" />
                 </SelectTrigger>
@@ -310,7 +310,7 @@ function NewsPageContent() {
                             href={`/news/${item.id}`}
                             className={buttonVariants({
                               size: "sm",
-                              className: "rounded-full font-bold shadow-md transition-all hover:bg-slate-800",
+                              className: "rounded-full font-bold shadow-md transition-all hover:bg-slate-800 flex items-center",
                             })}
                           >
                             详情分析 <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -320,7 +320,7 @@ function NewsPageContent() {
                             className={buttonVariants({
                               variant: "outline",
                               size: "sm",
-                              className: "rounded-full font-bold",
+                              className: "rounded-full font-bold flex items-center",
                             })}
                           >
                             全网关联
