@@ -85,17 +85,32 @@ function NewsPageContent() {
     loadData();
   }, [page, keyword, category, source, sentiment]);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const pageSize = 20;
+  const MAX_RECORDS = 10000;
+  const MAX_PAGES = MAX_RECORDS / pageSize;
+
+  const totalPages = data ? Math.min(MAX_PAGES, Math.ceil(data.total / data.pageSize)) : 1;
   const currentPage = Number(page);
 
   const handleFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value && value !== "none") {
-      params.set(key, value);
+    
+    if (key === "page") {
+      const targetPage = Number(value);
+      if (targetPage > MAX_PAGES) {
+        alert(`系统最大支持查询 ${MAX_RECORDS.toLocaleString()} 条记录（前 ${MAX_PAGES} 页）`);
+        return;
+      }
+      params.set("page", value);
     } else {
-      params.delete(key);
+      if (value && value !== "none") {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      params.set("page", "1");
     }
-    params.set("page", "1");
+    
     router.push(`/news?${params.toString()}`);
   };
 
@@ -256,7 +271,7 @@ function NewsPageContent() {
 
            {/* Pagination */}
            {!loading && totalPages > 1 && (
-             <div className="mt-12 flex items-center justify-between border-t border-border/40 pt-8">
+             <div className="mt-12 flex items-center justify-between border-t border-border/40 pt-8 relative">
                 <Button 
                   variant="ghost" 
                   disabled={currentPage <= 1}
@@ -268,6 +283,11 @@ function NewsPageContent() {
                 <span className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.3em]">
                   {currentPage} / {totalPages}
                 </span>
+                {data && data.total > MAX_RECORDS && currentPage === MAX_PAGES && (
+                  <p className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-accent uppercase tracking-wider whitespace-nowrap">
+                    最大支持查询前 10,000 条记录
+                  </p>
+                )}
                 <Button 
                   variant="ghost" 
                   disabled={currentPage >= totalPages}
