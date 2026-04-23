@@ -21,7 +21,7 @@ import { FUTURE_MODULES } from "@odin-pulse/shared";
 
 import { fetchNews, fetchNewsStats } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 

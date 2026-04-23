@@ -19,11 +19,10 @@ import {
   Filter
 } from "lucide-react";
 
-import { AuthStatus } from "@/components/auth-status";
 import { RefreshButton } from "@/components/refresh-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -33,10 +32,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchNews } from "@/lib/api";
 import { Suspense, useEffect, useState, ReactNode } from "react";
 import { NewsListResponse } from "@odin-pulse/shared";
+import { cn } from "@/lib/utils";
 
 const quickFilters = [
   { label: "全部资讯", value: "all" },
@@ -565,10 +564,4 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function cn(...inputs: any[]) {
-  const { clsx } = require("clsx");
-  const { twMerge } = require("tailwind-merge");
-  return twMerge(clsx(inputs));
 }

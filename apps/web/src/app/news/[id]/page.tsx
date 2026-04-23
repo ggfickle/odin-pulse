@@ -11,14 +11,12 @@ import {
   Radar,
   ScanSearch,
   Share2,
-  Bookmark,
   ChevronRight,
 } from "lucide-react";
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-import { AuthStatus } from "@/components/auth-status";
 import { fetchNewsDetail } from "@/lib/api";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

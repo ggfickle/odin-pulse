@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Sparkles, ShieldCheck, Fingerprint, Lock, Globe, Zap, Radar } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Lock, Globe, Zap, Radar } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { LoginPanel } from "@/components/login-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const fadeInUp = {

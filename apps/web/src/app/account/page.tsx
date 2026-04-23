@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, UserRound, Settings, Activity, Database, Key } from "lucide-react";
+import { ArrowLeft, ShieldCheck, UserRound, Settings, Database, Key } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { AccountPanel } from "@/components/account-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const fadeInUp = {
