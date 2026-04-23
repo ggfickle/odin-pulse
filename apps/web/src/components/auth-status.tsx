@@ -51,15 +51,16 @@ export function AuthStatus() {
   }, []);
 
   async function handleLogout() {
-    await fetch("/api/v1/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    startTransition(() => {
-      router.refresh();
-      router.push("/");
-    });
+    try {
+      await fetch("/api/v1/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      // 使用 window.location 进行强制刷新，确保会话状态在全局彻底清除
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   }
 
   if (!user) {

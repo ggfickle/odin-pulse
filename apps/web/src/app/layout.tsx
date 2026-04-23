@@ -11,7 +11,6 @@ const bodyFont = Inter({
 const headingFont = Newsreader({
   variable: "--font-heading",
   subsets: ["latin"],
-  style: "italic",
 });
 
 export const metadata: Metadata = {

@@ -127,7 +127,7 @@ function NewsPageContent() {
 
       {/* 🔵 Search & Filter Bar (Ultra Slim) */}
       <motion.div 
-        className="mb-12 sticky top-20 z-40"
+        className="mb-12 z-40"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -147,8 +147,10 @@ function NewsPageContent() {
            <Separator orientation="vertical" className="h-6 hidden md:block opacity-40" />
            <div className="flex items-center gap-2 w-full md:w-auto p-1 md:p-0">
               <Select value={category || "none"} onValueChange={(v: string | null) => handleFilter("category", v ?? "none")}>
-                <SelectTrigger className="border-none shadow-none bg-transparent h-11 px-4 font-bold text-[13px] hover:bg-secondary rounded-xl transition-colors">
-                  <SelectValue placeholder="所有类别" />
+                <SelectTrigger className="border-none shadow-none bg-transparent h-11 px-4 font-bold text-[13px] hover:bg-secondary rounded-xl transition-colors min-w-[120px]">
+                  <SelectValue>
+                    {category ? category : "所有类别"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border/60">
                    <SelectItem value="none">所有类别</SelectItem>
@@ -156,8 +158,10 @@ function NewsPageContent() {
                 </SelectContent>
               </Select>
               <Select value={source || "none"} onValueChange={(v: string | null) => handleFilter("source", v ?? "none")}>
-                <SelectTrigger className="border-none shadow-none bg-transparent h-11 px-4 font-bold text-[13px] hover:bg-secondary rounded-xl transition-colors">
-                  <SelectValue placeholder="所有来源" />
+                <SelectTrigger className="border-none shadow-none bg-transparent h-11 px-4 font-bold text-[13px] hover:bg-secondary rounded-xl transition-colors min-w-[120px]">
+                  <SelectValue>
+                    {source ? source : "所有来源"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-border/60">
                    <SelectItem value="none">所有来源</SelectItem>

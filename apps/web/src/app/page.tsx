@@ -106,20 +106,23 @@ export default async function HomePage() {
               viewport={{ once: true }}
             >
               <Link href={leadStory ? `/news/${leadStory.id}` : "/news"} className="block h-full group">
-                <Card className="bento-card h-full p-8 md:p-12 flex flex-col justify-end overflow-hidden border-none bg-primary text-white">
+                <Card className="bento-card h-full p-8 md:p-12 flex flex-col border-none bg-primary text-white overflow-hidden">
                    <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:opacity-20 transition-opacity">
                       <Newspaper className="h-48 w-48 rotate-12" />
                    </div>
-                   <div className="relative z-10">
-                      <div className="flex items-center gap-3 mb-6">
-                        <span className="mono-tag bg-white/10 text-white border-none">{leadStory?.source || "Featured"}</span>
-                        <span className="text-xs font-bold text-white/40">{formatDateTime(leadStory?.publishTime || new Date().toISOString())}</span>
-                      </div>
+                   <div className="flex items-center gap-3 mb-6 relative z-10">
+                     <span className="mono-tag bg-white/10 text-white border-none">{leadStory?.source || "Featured"}</span>
+                     <span className="text-xs font-bold text-white/40">{formatDateTime(leadStory?.publishTime || new Date().toISOString())}</span>
+                   </div>
+                   <div className="flex-1 flex flex-col justify-center relative z-10">
                       <h2 className="headline-sharp text-3xl md:text-5xl font-black mb-6 leading-tight group-hover:text-accent transition-colors">
                         {leadStory?.title || "探索实时的市场宏观脉动"}
                       </h2>
-                      <div className="flex items-center gap-2 text-sm font-bold text-accent">
-                        阅读全文 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      <p className="text-white/60 font-medium line-clamp-3 md:line-clamp-4 leading-relaxed mb-8 max-w-2xl">
+                        {leadStory?.content.replace(/<[^>]*>/g, '') || "加载中..."}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-accent group-hover:translate-x-2 transition-transform">
+                        阅读全文 <ArrowRight className="h-4 w-4" />
                       </div>
                    </div>
                 </Card>
@@ -133,9 +136,9 @@ export default async function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="bento-card bg-white h-full p-6 flex flex-col justify-between">
+              <Card className="bento-card bg-white h-full p-8 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                   <div className="p-2 rounded-lg bg-secondary text-primary">
+                   <div className="p-2.5 rounded-xl bg-secondary text-primary">
                       <Activity className="h-5 w-5" />
                    </div>
                    <Badge variant="outline" className="text-[10px] font-black border-emerald-500/20 text-emerald-600 bg-emerald-500/5 uppercase tracking-tighter shadow-none">Live</Badge>
@@ -155,9 +158,9 @@ export default async function HomePage() {
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
             >
-              <Card className="bento-card bg-white h-full p-6 flex flex-col justify-between">
+              <Card className="bento-card bg-white h-full p-8 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                   <div className="p-2 rounded-lg bg-secondary text-accent">
+                   <div className="p-2.5 rounded-xl bg-secondary text-accent">
                       <TrendingUp className="h-5 w-5" />
                    </div>
                 </div>
@@ -170,31 +173,41 @@ export default async function HomePage() {
 
             {/* News Feed Bento (Horizontal) */}
             <motion.div 
-              className="md:col-span-12 md:row-span-1"
+              className="md:col-span-12 md:row-span-2"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <Card className="bento-card bg-white h-full flex items-center px-8 md:px-12">
-                 <div className="flex items-center gap-8 w-full overflow-hidden">
-                    <div className="hidden lg:flex items-center gap-3 shrink-0">
+              <Card className="bento-card bg-white h-full p-8 md:p-12 overflow-hidden">
+                 <div className="flex items-center justify-between mb-10">
+                    <div className="flex items-center gap-3">
                        <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">Latest Flow</span>
-                    </div>
-                    <div className="flex-1 flex gap-12 overflow-hidden whitespace-nowrap">
-                       {otherStories.map((item, i) => (
-                         <Link key={item.id} href={`/news/${item.id}`} className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-3 shrink-0">
-                            <span className="text-primary/20 font-black">0{i+1}</span>
-                            {item.title}
-                         </Link>
-                       ))}
+                       <span className="text-[11px] font-black uppercase tracking-widest text-primary">Latest Flow</span>
                     </div>
                     <Link 
                       href="/news"
-                      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "font-black text-[10px] uppercase tracking-widest shrink-0 flex items-center")}
+                      className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:text-primary")}
                     >
-                      View All <ChevronRight className="ml-1 h-3 w-3" />
+                      View All Feed <ChevronRight className="ml-1 h-3 w-3" />
                     </Link>
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {otherStories.map((item, i) => (
+                      <Link key={item.id} href={`/news/${item.id}`} className="group block">
+                        <div className="flex flex-col h-full">
+                           <div className="flex items-center gap-2 mb-4">
+                              <span className="text-primary/20 font-black text-xs tracking-tighter">0{i+1}</span>
+                              <span className="mono-tag text-[9px] bg-secondary/50">{item.source}</span>
+                           </div>
+                           <h3 className="text-sm font-black text-primary group-hover:text-accent transition-colors leading-snug line-clamp-2 mb-3">
+                              {item.title}
+                           </h3>
+                           <p className="text-xs text-muted-foreground font-medium line-clamp-2 leading-relaxed opacity-60">
+                             {item.content.replace(/<[^>]*>/g, '')}
+                           </p>
+                        </div>
+                      </Link>
+                    ))}
                  </div>
               </Card>
             </motion.div>
