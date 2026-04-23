@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type LoginMode = "password" | "code";
 
@@ -21,303 +22,288 @@ const fadeInUp = {
 
 export function LoginPanel() {
   const router = useRouter();
-  const [mode, setMode] = useState<LoginMode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [verifyCode, setVerifyCode] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [mode, setLoginMode] = useState<LoginMode>("code");
   const [loading, setLoading] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
 
-  const submitLabel = useMemo(() => {
-    return mode === "password" ? "邮箱密码登录" : "验证码登录";
-  }, [mode]);
+  const isEmailValid = useMemo(() => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }, [email]);
 
-  async function handlePasswordLogin(event: FormEvent) {
-    event.preventDefault();
+  const sendCode = async () => {
+    if (!isEmailValid || countdown > 0) return;
+
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     try {
-      const response = await fetch("/api/v1/auth/email-verify/login-by-password", {
+      const res = await fetch("/api/v1/auth/email-verify/send", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "发送失败");
 
-      setMessage("登录成功，正在跳转。");
-      router.push("/");
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      setError(normalizeError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url =
+        mode === "password"
+          ? "/api/v1/auth/email-verify/login-by-password"
+          : "/api/v1/auth/email-verify/login";
+
+      const body =
+        mode === "password" ? { email, password } : { email, code };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "登录失败");
+
+      router.push("/account");
       router.refresh();
-    } catch (requestError) {
-      setError(normalizeError(requestError));
+    } catch (err) {
+      setError(normalizeError(err));
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleCodeLogin(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
+  const redirectToProvider = async (provider: "github" | "google") => {
     try {
-      const response = await fetch("/api/v1/auth/email-verify/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email,
-          verifyCode,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      setMessage("登录成功，正在跳转。");
-      router.push("/");
-      router.refresh();
-    } catch (requestError) {
-      setError(normalizeError(requestError));
-    } finally {
-      setLoading(false);
+      const res = await fetch(`/api/v1/auth/${provider}-oauth-url`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      window.location.href = data.url;
+    } catch (err) {
+      setError(normalizeError(err));
     }
-  }
-
-  async function sendCode() {
-    setSendingCode(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      const response = await fetch("/api/v1/auth/email-verify/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          type: "login",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      setMessage("验证码已发送。");
-    } catch (requestError) {
-      setError(normalizeError(requestError));
-    } finally {
-      setSendingCode(false);
-    }
-  }
-
-  async function redirectToProvider(provider: "github" | "google") {
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-
-    try {
-      const response = await fetch(`/api/v1/auth/${provider}-oauth-url`);
-      const payload = (await response.json()) as { url: string | null };
-      if (!payload.url) {
-        throw new Error(`${provider} oauth not configured`);
-      }
-      window.location.href = payload.url;
-    } catch (requestError) {
-      setError(normalizeError(requestError));
-      setLoading(false);
-    }
-  }
+  };
 
   return (
     <motion.div 
-      className="grid gap-8 xl:grid-cols-[1fr_360px]"
+      variants={staggerContainer}
       initial="initial"
       animate="animate"
-      variants={{
-        animate: { transition: { staggerChildren: 0.1 } }
-      }}
+      className="grid gap-8 lg:grid-cols-2 lg:items-center"
     >
-      <motion.section variants={fadeInUp} className="panel-strong rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
-        <div className="flex flex-wrap gap-4 mb-8">
-          <Button
-            variant={mode === "password" ? "default" : "outline"}
-            onClick={() => setMode("password")}
-            className="rounded-full px-8 py-6 h-auto font-bold text-base shadow-lg"
-          >
-            邮箱密码
-          </Button>
-          <Button
-            variant={mode === "code" ? "default" : "outline"}
-            onClick={() => setMode("code")}
-            className="rounded-full px-8 py-6 h-auto font-bold text-base shadow-lg"
-          >
-            邮箱验证码
-          </Button>
+      <motion.div variants={fadeInUp} className="space-y-6">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white shadow-2xl shadow-primary/20">
+          <ShieldCheck className="h-10 w-10" />
         </div>
-
-        <form
-          onSubmit={mode === "password" ? handlePasswordLogin : handleCodeLogin}
-          className="grid gap-6"
-        >
-          <div className="grid gap-2">
-            <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
-              邮箱地址
-            </label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
-              placeholder="you@example.com"
-              required
-            />
+        <h1 className="headline text-4xl font-extrabold text-primary md:text-6xl lg:text-7xl">
+          安全网关<br />
+          <span className="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+            受信访问控制
+          </span>
+        </h1>
+        <p className="max-w-md text-lg text-slate-600 leading-relaxed">
+          Odin Pulse 采用企业级身份验证基建，支持多因素认证与 OAuth 2.0 协议，确保您的数据访问安全无虞。
+        </p>
+        
+        <div className="grid grid-cols-2 gap-4 pt-4">
+          <div className="p-4 rounded-2xl bg-white/50 border border-slate-100 backdrop-blur-sm shadow-sm">
+            <div className="text-2xl font-bold text-primary">AES-256</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">数据加密</div>
           </div>
+          <div className="p-4 rounded-2xl bg-white/50 border border-slate-100 backdrop-blur-sm shadow-sm">
+            <div className="text-2xl font-bold text-primary">OAuth 2.0</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">授权协议</div>
+          </div>
+        </div>
+      </motion.div>
 
-          <AnimatePresence mode="wait">
-            {mode === "password" ? (
-              <motion.div
-                key="password-field"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="grid gap-2"
+      <motion.aside variants={fadeInUp} className="relative">
+        {/* Background decorative elements */}
+        <div className="absolute -top-10 -right-10 h-64 w-64 rounded-full bg-secondary/5 blur-3xl -z-10" />
+        <div className="absolute -bottom-10 -left-10 h-64 w-64 rounded-full bg-accent/5 blur-3xl -z-10" />
+
+        <Card className="rounded-[2.5rem] p-4 md:p-6 shadow-2xl border-white/60 bg-white/70 backdrop-blur-xl overflow-hidden relative">
+          <CardHeader className="space-y-1 pb-8">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl font-bold">身份验证</CardTitle>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 px-2 py-0 shadow-none">
+                Encrypted
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-500">选择您偏好的方式登录 Odin Pulse 平台</p>
+          </CardHeader>
+          
+          <CardContent className="space-y-4">
+            <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
+              <button 
+                onClick={() => setLoginMode("code")}
+                className={cn(
+                  "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                  mode === "code" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-primary"
+                )}
               >
-                <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
-                  安全密码
-                </label>
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
-                  placeholder="请输入密码"
-                  required
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="code-field"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="grid gap-4 sm:grid-cols-[1fr_auto]"
+                验证码登录
+              </button>
+              <button 
+                onClick={() => setLoginMode("password")}
+                className={cn(
+                  "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
+                  mode === "password" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-primary"
+                )}
               >
-                <div className="grid gap-2">
-                  <label className="text-sm font-bold uppercase tracking-widest text-slate-500 ml-1">
-                    验证码
-                  </label>
+                密码登录
+              </button>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">电子邮箱</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-primary transition-colors" />
                   <Input
-                    value={verifyCode}
-                    onChange={(event) => setVerifyCode(event.target.value)}
-                    className="h-14 rounded-2xl border-slate-200 bg-white px-6 text-base shadow-sm focus-visible:ring-primary/20"
-                    placeholder="6 位验证码"
+                    type="email"
                     required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="pl-11 h-12 rounded-xl border-slate-200 bg-white focus:bg-white transition-all shadow-none"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={sendCode}
-                  disabled={sendingCode || !email}
-                  className="mt-7 h-14 rounded-2xl border-slate-200 bg-white px-8 font-bold text-slate-700 shadow-sm"
-                >
-                  {sendingCode ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "获取验证码"
-                  )}
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="mt-4 h-14 rounded-2xl bg-primary px-10 text-lg font-bold text-white shadow-xl shadow-primary/20 transition-all hover:-translate-y-1 hover:bg-slate-800 disabled:opacity-70"
-          >
-            {loading ? (
-              <LoaderCircle className="h-5 w-5 animate-spin" />
-            ) : (
-              <Mail className="h-5 w-5" />
-            )}
-            {submitLabel}
-          </Button>
-        </form>
+              <AnimatePresence mode="wait">
+                {mode === "code" ? (
+                  <motion.div
+                    key="code"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="space-y-2"
+                  >
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">验证码</label>
+                    <div className="flex gap-2">
+                      <Input
+                        required
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        placeholder="000000"
+                        className="h-12 rounded-xl border-slate-200 bg-white focus:bg-white transition-all shadow-none"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!isEmailValid || countdown > 0 || loading}
+                        onClick={sendCode}
+                        className="h-12 rounded-xl px-4 font-bold border-slate-200 shadow-none"
+                      >
+                        {countdown > 0 ? `${countdown}s` : "获取验证码"}
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="password"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="space-y-2"
+                  >
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">登录密码</label>
+                    <Input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="h-12 rounded-xl border-slate-200 bg-white focus:bg-white transition-all shadow-none"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-        {message && (
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 border border-emerald-100"
-          >
-            {message}
-          </motion.p>
-        )}
-        {error && (
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-6 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 border border-rose-100"
-          >
-            {error}
-          </motion.p>
-        )}
-      </motion.section>
+              {error && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-medium">
+                  {error}
+                </div>
+              )}
 
-      <motion.aside variants={fadeInUp} className="flex flex-col gap-8">
-        <Card className="panel border-none rounded-[2.5rem] p-6 shadow-xl">
-          <CardHeader className="p-0 mb-6">
-            <p className="eyebrow">OAuth Access</p>
-            <CardTitle className="headline mt-2 text-2xl font-bold text-primary">第三方登录</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 grid gap-4">
-            <Button
-              variant="outline"
-              onClick={() => redirectToProvider("github")}
-              className="h-14 w-full rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:border-primary hover:text-primary transition-all"
-            >
-              <Github className="h-5 w-5 mr-2" />
-              GitHub 登录
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => redirectToProvider("google")}
-              className="h-14 w-full rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm hover:border-primary hover:text-primary transition-all"
-            >
-              <ShieldCheck className="h-5 w-5 mr-2" />
-              Google 登录
-            </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 rounded-xl bg-primary font-bold shadow-lg shadow-primary/20 hover:bg-slate-800 transition-all mt-2"
+              >
+                {loading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : "立即登录系统"}
+              </Button>
+            </form>
+
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
+                <span className="bg-white px-4 text-slate-400">快速第三方授权</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                onClick={() => redirectToProvider("github")}
+                className="h-12 rounded-xl border-slate-200 font-bold transition-all hover:border-primary shadow-none"
+              >
+                <Github className="h-4 w-4 mr-2" />
+                GitHub
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => redirectToProvider("google")}
+                className="h-12 rounded-xl border-slate-200 font-bold transition-all hover:border-primary shadow-none"
+              >
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Google
+              </Button>
+            </div>
             
-            <p className="mt-4 text-sm leading-relaxed text-slate-500 bg-slate-50 p-4 rounded-2xl border border-slate-100 italic">
-              "工业级认证基建，GitHub / Google 授权受控于后端环境变量，确保数据主权。"
+            <p className="mt-4 text-[10px] leading-relaxed text-slate-400 text-center italic">
+              "工业级认证基建，授权受控于后端环境变量，确保数据主权。"
             </p>
             
-            <Button variant="link" asChild className="mt-4 font-bold text-secondary hover:text-primary">
-              <Link href="/account" className="flex items-center gap-2">
-                <UserRound className="h-4 w-4" />
-                已登录？进入账户中心
-              </Link>
-            </Button>
+            <Link 
+              href="/account" 
+              className={cn(
+                buttonVariants({ variant: "link" }),
+                "mt-4 w-full font-bold text-secondary hover:text-primary flex items-center justify-center gap-2"
+              )}
+            >
+              <UserRound className="h-4 w-4" />
+              已登录？进入账户中心
+            </Link>
           </CardContent>
         </Card>
       </motion.aside>
@@ -329,5 +315,13 @@ function normalizeError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
-  return "请求失败";
+  return String(error);
 }
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};

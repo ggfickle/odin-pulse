@@ -225,7 +225,7 @@ function NewsPageContent() {
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-4">数据来源</label>
-              <Select value={source || "none"} onValueChange={(v: string) => handleFilter("source", v)}>
+              <Select value={source || "none"} onValueChange={(v: string | null) => handleFilter("source", v ?? "none")}>
                 <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all shadow-none">
                   <SelectValue placeholder="全部来源" />
                 </SelectTrigger>
