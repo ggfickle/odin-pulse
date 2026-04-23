@@ -8,6 +8,7 @@ import type {
   ShortLink,
   ShortLinkListResponse,
   CreateShortLinkRequest,
+  MarketListResponse,
 } from "@odin-pulse/shared";
 
 function getApiBaseUrl() {
@@ -23,15 +24,13 @@ function getApiBaseUrl() {
 async function fetchJson<T>(path: string): Promise<T> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     cache: "no-store",
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+    throw new Error(`Request failed: ${response.status}`);
   }
 
   return (await response.json()) as T;
@@ -71,14 +70,12 @@ export async function fetchShortLinks(): Promise<ShortLinkListResponse> {
 export async function createShortLink(data: CreateShortLinkRequest): Promise<ShortLink> {
   const response = await fetch(`${getApiBaseUrl()}/api/v1/short-links`, {
     method: "POST",
-    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+    throw new Error(`Request failed: ${response.status}`);
   }
 
   return (await response.json()) as ShortLink;
@@ -87,13 +84,16 @@ export async function createShortLink(data: CreateShortLinkRequest): Promise<Sho
 export async function deleteShortLink(id: string): Promise<{ success: boolean }> {
   const response = await fetch(`${getApiBaseUrl()}/api/v1/short-links/${id}`, {
     method: "DELETE",
-    credentials: "include",
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? `Request failed: ${response.status}`);
+    throw new Error(`Request failed: ${response.status}`);
   }
 
   return (await response.json()) as { success: boolean };
+}
+
+export async function fetchMarketQuotes(symbols?: string[]): Promise<MarketListResponse> {
+  const path = symbols ? `/api/v1/market/quotes?symbols=${symbols.join(",")}` : "/api/v1/market/quotes";
+  return fetchJson<MarketListResponse>(path);
 }

@@ -45,6 +45,7 @@ const envSchema = z.object({
   ES_USERNAME: z.string().default("elastic"),
   ES_PASSWORD: z.string().default(""),
   ES_INDEX: z.string().default("finance_news"),
+  ITICK_API_KEY: z.string().optional(),
   FETCH_INTERVAL_MS: z.coerce.number().default(120_000),
   REFRESH_GUARD_MS: z.coerce.number().default(60_000),
   SCHEDULE_ENABLED: booleanFromEnv.default(true),
