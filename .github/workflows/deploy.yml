@@ -66,7 +66,9 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           echo "ITICK_API_KEY=${ITICK_API_KEY}" >> "${ODIN_PULSE_RUNTIME_ENV_DIR}/api.env"
-          
+
+          export NEXT_PUBLIC_SHORT_LINK_DOMAIN="$(grep '^NEXT_PUBLIC_SHORT_LINK_DOMAIN=' "${ODIN_PULSE_RUNTIME_ENV_DIR}/web.env" | cut -d= -f2-)"
+
           export DEPLOY_PATH REPO_URL BRANCH
           export ODIN_PULSE_RUNTIME_ENV_DIR ODIN_PULSE_DOCKER_NETWORK ODIN_PULSE_COMPOSE_PROJECT
           export ODIN_PULSE_API_PORT ODIN_PULSE_WEB_PORT ODIN_PULSE_IMAGE_TAG

@@ -33,6 +33,8 @@ services:
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SHORT_LINK_DOMAIN: ${NEXT_PUBLIC_SHORT_LINK_DOMAIN}
     image: odin-pulse-web:${ODIN_PULSE_IMAGE_TAG:-local}
     restart: unless-stopped
     depends_on:

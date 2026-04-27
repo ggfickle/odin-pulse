@@ -8,6 +8,9 @@ RUN corepack enable
 FROM base AS build
 WORKDIR /app
 
+ARG NEXT_PUBLIC_SHORT_LINK_DOMAIN
+ENV NEXT_PUBLIC_SHORT_LINK_DOMAIN=${NEXT_PUBLIC_SHORT_LINK_DOMAIN}
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json

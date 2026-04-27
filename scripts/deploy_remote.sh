@@ -136,6 +136,7 @@ export ODIN_PULSE_DOCKER_NETWORK
 export ODIN_PULSE_API_PORT
 export ODIN_PULSE_WEB_PORT
 export ODIN_PULSE_IMAGE_TAG
+export NEXT_PUBLIC_SHORT_LINK_DOMAIN="${NEXT_PUBLIC_SHORT_LINK_DOMAIN:-}"
 
 log "validating compose configuration"
 docker compose -f "${COMPOSE_FILE}" config >/dev/null
