@@ -7,7 +7,7 @@ import { ConflictError } from "../../lib/errors.js";
 export class ShortLinkService {
   async create(userId: string, data: CreateShortLinkRequest): Promise<ShortLink> {
     let slug = data.slug;
-    
+
     if (slug) {
       const existing = await shortLinkRepository.findBySlug(slug);
       if (existing) {

@@ -1,8 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 
+import { RateLimiter } from "../../lib/rate-limit.js";
+import { createRequireSession } from "../../lib/require-session.js";
 import { AuthService } from "./auth.service.js";
-import { AuthSessionService } from "./session.service.js";
+import { sessionService } from "../../lib/require-session.js";
 
 const emailVerifySendSchema = z.object({
   email: z.string().email(),
@@ -41,23 +43,27 @@ const updateUserInfoSchema = z.object({
   avatar: z.string().url().optional(),
 });
 
+// Rate limiters
+const emailSendLimit = new RateLimiter("rl:email-send");
+const loginAttemptLimit = new RateLimiter("rl:login-attempt");
+const ipLimit = new RateLimiter("rl:ip-send");
+
+function getClientIp(request: FastifyRequest): string {
+  const forwarded = request.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0].trim();
+  }
+  return request.ip;
+}
+
 export async function registerAuthRoutes(app: FastifyInstance) {
   const authService = new AuthService();
-  const sessionService = new AuthSessionService();
-  const requireSession = async (request: FastifyRequest) => {
-    const session = await sessionService.getSession(request);
-    if (!session) {
-      throw app.httpErrors.unauthorized("认证失败，请重新登录");
-    }
-    return session;
-  };
+  const requireSession = createRequireSession(app);
 
   app.setErrorHandler((error, request, reply) => {
     const isAuthRoute =
       request.url.startsWith("/api/v1/auth") ||
-      request.url.startsWith("/auth") ||
-      request.url.startsWith("/api/v1/user") ||
-      request.url.startsWith("/user");
+      request.url.startsWith("/api/v1/user");
 
     if (!isAuthRoute) {
       reply.send(error);
@@ -80,11 +86,13 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const message =
       error instanceof Error ? error.message : "auth request failed";
     const statusCode =
-      message.includes("unauthorized") || message.includes("认证失败")
-        ? 401
-        : message.includes("SMTP")
-          ? 503
-          : 400;
+      message.includes("频繁") || message.includes("锁定") || message.includes("次数过多")
+        ? 429
+        : message.includes("unauthorized") || message.includes("认证失败")
+          ? 401
+          : message.includes("SMTP")
+            ? 503
+            : 400;
 
     reply.status(statusCode).send({
       message,
@@ -93,30 +101,63 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
   app.get("/api/v1/auth/health", async () => ({ ok: true }));
 
+  // --- Email verify send (with rate limiting) ---
   app.post("/api/v1/auth/email-verify/send", async (request) => {
     const body = emailVerifySendSchema.parse(request.body);
+
+    // Rate limit: same email once per 60s
+    await emailSendLimit.check(body.email, 1, 60);
+    // Rate limit: same IP max 10 per hour
+    await ipLimit.check(getClientIp(request), 10, 3600);
+
     return {
       success: await authService.sendEmailVerifyCode(body.email, body.type),
     };
   });
 
+  // --- Email code login (with attempt limiting) ---
   app.post("/api/v1/auth/email-verify/login", async (request, reply) => {
     const body = emailCodeLoginSchema.parse(request.body);
-    const result = await authService.loginByEmailCode(body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
+
+    // Check if currently locked out
+    await loginAttemptLimit.checkLocked(`code:${body.email}`);
+
+    try {
+      const result = await authService.loginByEmailCode(body);
+      await loginAttemptLimit.reset(`code:${body.email}`);
+      const session = await authService.buildSessionPayload(result.userId);
+      await sessionService.createSession(reply, session);
+      return result;
+    } catch {
+      // Count all failures to prevent enumeration
+      await loginAttemptLimit.recordFailure(`code:${body.email}`, 5, 900, 900);
+      throw new Error("验证码不正确");
+    }
   });
 
+  // --- Password login (with attempt limiting) ---
   app.post("/api/v1/auth/email-verify/login-by-password", async (request, reply) => {
     const body = emailPasswordLoginSchema.parse(request.body);
-    const result = await authService.loginByPassword(body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
+
+    // Check if currently locked out
+    await loginAttemptLimit.checkLocked(`pw:${body.email}`);
+
+    try {
+      const result = await authService.loginByPassword(body);
+      await loginAttemptLimit.reset(`pw:${body.email}`);
+      const session = await authService.buildSessionPayload(result.userId);
+      await sessionService.createSession(reply, session);
+      return result;
+    } catch {
+      // Count all failures to prevent enumeration
+      await loginAttemptLimit.recordFailure(`pw:${body.email}`, 5, 900, 900);
+      throw new Error("密码错误");
+    }
   });
 
-  app.post("/api/v1/auth/change-password", async (request, reply) => {
+  // --- Other auth routes ---
+
+  app.post("/api/v1/auth/change-password", async (request) => {
     const session = await requireSession(request);
     const body = passwordChangeSchema.parse(request.body);
     return {
@@ -162,6 +203,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  // --- User routes ---
+
   app.get("/api/v1/user/get-user-info", async (request) => {
     const session = await requireSession(request);
     return authService.getUserInfo(session);
@@ -173,54 +216,5 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return {
       success: await authService.updateUserInfo(session, body),
     };
-  });
-
-  app.post("/auth/email-verify/send", async (request) => {
-    const body = emailVerifySendSchema.parse(request.body);
-    return { success: await authService.sendEmailVerifyCode(body.email, body.type) };
-  });
-  app.post("/auth/email-verify/login", async (request, reply) => {
-    const body = emailCodeLoginSchema.parse(request.body);
-    const result = await authService.loginByEmailCode(body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
-  });
-  app.post("/auth/email-verify/login-by-password", async (request, reply) => {
-    const body = emailPasswordLoginSchema.parse(request.body);
-    const result = await authService.loginByPassword(body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
-  });
-  app.post("/auth/github-callback", async (request, reply) => {
-    const body = oauthCallbackSchema.parse(request.body);
-    const result = await authService.loginByOAuth("github", body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
-  });
-  app.post("/auth/google-callback", async (request, reply) => {
-    const body = oauthCallbackSchema.parse(request.body);
-    const result = await authService.loginByOAuth("google", body);
-    const session = await authService.buildSessionPayload(result.userId);
-    await sessionService.createSession(reply, session);
-    return result;
-  });
-  app.get("/auth/github-oauth-url", async () => ({ url: await authService.getOAuthUrl("github") }));
-  app.get("/auth/google-oauth-url", async () => ({ url: await authService.getOAuthUrl("google") }));
-  app.get("/auth/me", async (request) => authService.getCurrentUser(await requireSession(request)));
-  app.post("/auth/logout", async (request, reply) => {
-    await sessionService.destroySession(request, reply);
-    return { success: true };
-  });
-  app.get("/user/get-user-info", async (request) => {
-    const session = await requireSession(request);
-    return authService.getUserInfo(session);
-  });
-  app.post("/user/update-user-info", async (request) => {
-    const session = await requireSession(request);
-    const body = updateUserInfoSchema.parse(request.body);
-    return { success: await authService.updateUserInfo(session, body) };
   });
 }

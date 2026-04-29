@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
+import { createRequireSession } from "../../lib/require-session.js";
 import { NewsService } from "./news.service.js";
 
 const newsQuerySchema = z.object({
@@ -13,6 +14,8 @@ const newsQuerySchema = z.object({
 });
 
 export async function registerNewsRoutes(app: FastifyInstance, service: NewsService) {
+  const requireSession = createRequireSession(app);
+
   app.get("/health", async () => ({
     ok: true,
     scheduler: service.getSchedulerState(),
@@ -36,27 +39,13 @@ export async function registerNewsRoutes(app: FastifyInstance, service: NewsServ
 
   app.get("/api/v1/news/stats", async () => service.getStats());
 
-  app.post("/api/v1/news/refresh", async () => service.triggerRefresh("manual"));
-
-  app.post("/api/v1/news/sync", async () => service.syncLatestToEs());
-
-  app.get("/finance/news", async (request) => {
-    const query = newsQuerySchema.parse(request.query);
-    return service.getNews(query);
+  app.post("/api/v1/news/refresh", async (request) => {
+    await requireSession(request);
+    return service.triggerRefresh("manual");
   });
 
-  app.get("/finance/news/:id", async (request, reply) => {
-    const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
-    const detail = await service.getNewsDetail(id);
-    if (!detail) {
-      return reply.code(404).send({
-        message: "news not found",
-      });
-    }
-    return detail;
+  app.post("/api/v1/news/sync", async (request) => {
+    await requireSession(request);
+    return service.syncLatestToEs();
   });
-
-  app.get("/finance/news/refresh", async () => service.triggerRefresh("manual"));
-
-  app.get("/finance/news/sync", async () => service.syncLatestToEs());
 }

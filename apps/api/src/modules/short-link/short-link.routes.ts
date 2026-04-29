@@ -1,7 +1,8 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+
+import { createRequireSession } from "../../lib/require-session.js";
 import { shortLinkService } from "./short-link.service.js";
-import { AuthSessionService } from "../auth/session.service.js";
 
 const createShortLinkSchema = z.object({
   originalUrl: z.string().url(),
@@ -10,15 +11,7 @@ const createShortLinkSchema = z.object({
 });
 
 export async function registerShortLinkRoutes(app: FastifyInstance) {
-  const sessionService = new AuthSessionService();
-
-  const requireSession = async (request: FastifyRequest) => {
-    const session = await sessionService.getSession(request);
-    if (!session) {
-      throw app.httpErrors.unauthorized("认证失败，请重新登录");
-    }
-    return session;
-  };
+  const requireSession = createRequireSession(app);
 
   // Create short link
   app.post("/api/v1/short-links", async (request) => {
@@ -41,7 +34,7 @@ export async function registerShortLinkRoutes(app: FastifyInstance) {
     return { success };
   });
 
-  // Public redirection endpoint
+  // Public redirection endpoint (used by s.codego.eu.org)
   app.get("/s/:slug", async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const url = await shortLinkService.resolve(slug);
